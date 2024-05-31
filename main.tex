@@ -59,8 +59,14 @@ For Task 3, we employed simpler models, including XGBoost and Random Forests, wh
 
 \section{Introduction}
 
-The eRisk Challenge 2024 comprises three distinct tasks aimed at developing early risk prediction systems that utilize social media documents to detect antisocial behaviors, signs of mental illnesses, and eating disorders. Predictions are made using state-of-the-art natural language processing techniques applied to user-generated content. Our team focused on two specific tasks: task 1, which involves identifying depression symptoms from a questionnaire, and task 3, which focuses on diagnosing eating disorders. For this challenge, we proposed a system that predicts symptoms of depression based on the Beck Depression Inventory (BDI-II) using various sentence processing architectures and a multi class classification approach. Additionally, we developed a system to predict symptoms of eating disorders by comparing vectors derived from sentence transformers to relevant symptoms and using simple models like XGBoost that work on smaller datasets as the one provided for task 3.
+The eRisk Challenge 2024 \cite{parapar_overview_2023} comprises three distinct tasks aimed at developing early risk prediction systems that utilize social media documents to detect antisocial behaviors, signs of mental illnesses, and eating disorders. Predictions are made using state-of-the-art natural language processing techniques applied to user-generated content. Our team focused on two specific tasks: task 1, which involves identifying depression symptoms from a questionnaire, and task 3, which focuses on diagnosing eating disorders. For this challenge, we proposed a system that predicts symptoms of depression based on the Beck Depression Inventory (BDI-II)\cite{beck_beck_1996} using various sentence processing architectures and a multi class classification approach. Additionally, we developed a system to predict symptoms of eating disorders by comparing vectors derived from sentence transformers to relevant symptoms and using simple models like XGBoost that work on smaller datasets as the one provided for task 3.
 
+\subsection{Related Work}
+
+% The eRisk challenge \cite{parapar_overview_2023} has over 7 years of experiments to draw inspiration from, for task 1 in 2023, other teams have attempted to use vector representations of the sentences, and utilized either semantic search for transformer based models or cosine similarity to label the documents against the 21 symptoms of depression\cite{recharla_notebook_nodate}\cite{wang_notebook_nodate}. For task 3 we have \cite{grigore_notebook_nodate} teams that experimented with domain specific language models like MentalBERT and topic modeling to make their predictions
+
+
+The eRisk challenge, as detailed in Crestani et al. (2023) \cite{crestani_early_2022}, has a rich history of over seven years of experiments to draw from. In Task 1 of the 2023 challenge, various teams employed vector representations of sentences and leveraged either semantic search with transformer-based models or cosine similarity to categorize documents according to the 21 symptoms of depression \cite{recharla_notebook_nodate}\cite{wang_notebook_nodate}. For Task 3, teams such as those reported by Grigore et al. \cite{grigore_notebook_nodate} experimented with domain-specific language models, including MentalBERT, and utilized topic modeling to make their predictions.
 
 
 \section{Task 1: Search for symptoms of depression}
@@ -69,16 +75,10 @@ This task involves ranking documents relevant to symptoms of depression as ident
 
 For this year's task, qrels provided by human experts were made available, allowing these documents to be used as training data.
 
-
-\subsection{Task 1: Related Work}
-
-In previous iterations of this task, other teams have attempted to use vector representations of the sentences (formula ml 065)(uOttawa paper 069), and utilized either semantic search for transformer based models or cosine similarity to label the documents against the 21 symptoms of depression.
-
-
 \subsection{Task 1 Methodology}
 
 \subsubsection{Data management}
-We collected the TREC formatted files and undertook extensive data cleansing, including the removal of special characters and the correction of formatting errors. Subsequently, we merged the cleaned files using a script that compressed the documents into the Parquet format, a binary format optimized for fast querying and favored over CSV and other formats for data engineering tasks.
+We collected the TREC formatted files and undertook extensive data cleansing, including the removal of special characters and the correction of formatting errors. Subsequently, we merged the cleaned files using a python script that compressed the documents into the Parquet format, a binary format optimized for fast querying and favored over CSV and other formats for data engineering tasks.
 
 To ensure both persistence and easy access during model development, we hosted the data in Google Cloud Buckets.
 
@@ -100,9 +100,11 @@ Training set & 3,107           & 4,264,693           & 13.94                    
 
 Two distinct pipelines were employed for Task 1: a baseline pipeline and a sentence transformer-based solution. The system was hosted on Google Cloud Compute instances with the following specifications: Google Cloud Compute instance n1-standard-2. The code repository was maintained on GitHub.
 
-The experiments were implemented in Python, utilizing the PySpark library for parallel processing and handling large data volumes. Luigi was used to define the data processing pipelines. 
+The experiments were implemented in Python, utilizing the PySpark library for parallel processing and handling large data volumes. Luigi\cite{noauthor_getting_nodate} was used to define the data processing pipelines. 
 
-For the models, we defined workflows using TF-IDF and Word2Vec, and employed Naive Bayes, logistic regression, and factorization machines for predictions. This allowed us to compare the performance of these traditional methods with the sentence transformer-based systems more details on table 2.
+For the models, we defined workflows using TF-IDF and Word2Vec, and employed Naive Bayes, logistic regression, and factorization machines for predictions. This allowed us to compare the performance of these traditional methods with the sentence transformer-based systems \cite{reimers_sentence-bert_2019} more details on table 2.
+
+To be able to use sentence transformers with spark we had to define a wrapper class and implement a user defined function(UDF) to get the embeddings from the document column, the model we utilized for getting the embeddings was "all-MiniLM-L6-v2" that produces a 384 dimensional dense vector space and is a general purpose fast model\cite{noauthor_sentence-transformersall-minilm-l6-v2_nodate}.
 
 We ran three different models using traditional NLP techniques to generate sentence vectors from the documents: Word2Vec, TF-IDF, and Naive Bayes. Given the expected delays in retrieving embeddings with sentence transformers, we added a filtering step to the pipeline to reduce modeling time and computing costs. We used a count vectorizer to eliminate non-relevant posts, primarily spam or repeated strings.
 
@@ -122,7 +124,7 @@ To address this problem, we used relevancy labels (qrels) from previous competit
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{t1basepipeline.png}
-\caption{Task 1 Base Pipeline}
+\caption{Task 1 Baseline Pipeline}
 \label{fig:example}
 \end{figure}
 
@@ -190,17 +192,13 @@ We find that after evaluation on the hidden test set, our models score near to z
 
 \subsection{Task 1 Discussion}
 
-We made a strong assumption in this project that a classifier could be repurposed into a functional ranker. 
-Our results on the leaderboard show otherwise. 
-One potential reason for the poor performance is the fact that learning a classifier that performs well on a specific metric (such as F1 or accuracy) does not mean that the model is well calibrated to the distribution of the actual data. 
-If we had more time, we would have liked to explore proper ordinal regression through learning to rank.
+In this project, we made the significant assumption that a classifier could be repurposed as a functional ranker. However, our results on the leaderboard contradicted this assumption. One potential reason for the poor performance is that a classifier optimized for a specific metric (such as F1 or accuracy) may not be well-calibrated to the actual data distribution. Given more time, we would have explored proper ordinal regression through learning to rank methodologies.
 
-We noted during the construction of the pipeline that there were a non-trivial number of training examples that had a high-degree of repetition. We would have liked to explore more options to reduce the number of relevant training examples. One potential solution to remove irrelevant documents would be to filter relevancy using a keyword-based information retrieval algorithm like BM25, before ranking the documents using a statistical model. These documents were a symptom of a poorly performing model, because they are ill-behaved degenerate examples that the model is not able to capture due to representation. For example, a word2vec model trained on a repeating fragment of “I AM SAD” will likely fall into the same semantic space as a single instance of the fragment, and would be difficult to differentiate from angle alone. This means that sentences with high compression ratios and low entropy should be filtered from the dataset. We found through qualitative evaluation during development that filtering out these specific sentences helped produce better retrievals.	
-
+During pipeline construction, we observed a non-trivial number of training examples with a high degree of repetition. We would have preferred to explore more options for reducing the number of relevant training examples. One potential solution to eliminate irrelevant documents would be to filter relevance using a keyword-based information retrieval algorithm like BM25 \cite{robertson_probabilistic_2009}, before ranking the documents with a statistical model. These repetitive documents indicated a poorly performing model, as they represented ill-behaved, degenerate examples that the model struggled to capture due to representation issues. For instance, a word2vec model trained on repeating fragments like "I AM SAD" would likely place these fragments in the same semantic space as a single instance, making differentiation based on angle alone difficult. Thus, sentences with high compression ratios and low entropy should be filtered from the dataset. Our qualitative evaluation during development indicated that filtering out such sentences improved retrieval performance.
 
 \subsection{Task 1 Future Work}
 
-For future iterations of this task, we propose leveraging various language models to explore the capabilities of transformer-based systems. Additional strategies could include employing prompt engineering and using popular models to filter out sentences that are irrelevant to the symptoms. Given that large language models are regarded as the next evolution of search engines, this could prove to be a compelling area of exploration. Other potential avenues include fine-tuning language models and employing retrieval-augmented generation to enhance the accuracy of predictions.
+For future iterations of this task, we propose leveraging various language models to explore the capabilities of transformer-based systems. Additional strategies could include employing prompt engineering and using popular models to filter out sentences that are irrelevant to the symptoms. Given that large language models are regarded as the next evolution of search engines, this could prove to be a compelling area of exploration. Other potential avenues include fine-tuning language models and employing retrieval-augmented generation(RAG) to enhance the accuracy of predictions.
 
 \section{Task 3: Measuring the Severity of the Signs of Eating Disorders}
 
@@ -240,7 +238,7 @@ During the training phase of the challenge, the eRisk team released an entire hi
 
 \subsection{Task 3 Methodology}
 
-Our task is to predict the responses of the 2024 users to the EDE-Q questionnaire. To achieve this, we need to determine to what extent the characteristics associated with eating disorders are reflected in Reddit users' post and comment history. Note that the responses to the EDE-Q are integers ranging from 0 to 6. We approach this problem as a multi-class and multi-output classification task. The entire process is broken down into the following steps:
+Our task is to predict the responses of the 2024 users to the EDE-Q questionnaire. To achieve this, we need to determine to what extent the characteristics associated with eating disorders are reflected in the social media user's post and comment history. Note that the responses to the EDE-Q are integers ranging from 0 to 6. We approach this problem as a multi-class and multi-output classification task. The entire process is broken down into the following steps:
 
 \subsubsection{Data Collection}
 
@@ -250,15 +248,15 @@ The datasets for the 2022 and 2023 users were provided by the eRisk team. This d
 
 Preprocessing involved converting the JSON files to readable DataFrames in Pandas and cleaning the text data to remove noise, such as URLs, hashtags, and special characters. We tokenized the text and applied NLP techniques such as lemmatization, stemming, and stopword removal to normalize the data.
 
-Next, we leveraged the state-of-the-art BERT Large transformer model to generate writing embeddings. For this task, we used the `bert-base-uncased' pre-trained language model, which has been trained on 110 million parameters and works well with English texts. Writing embeddings were primarily generated in sentence chunks. For posts that were too long to feed into the transformer model (BERT has a maximum input sentence length of 512 tokens, including the [CLS] and [SEP] tokens), we concatenated all user posts together in chronological order and broke the resulting text into chunks of length \( n \), where \( n = 512 - 2 = 510 \). BERT produced embeddings with dimensions of 768.
+Next, we leveraged the state-of-the-art BERT\cite{devlin_bert_2019} Large transformer model to generate writing embeddings. For this task, we used the `bert-base-uncased'\cite{noauthor_google-bertbert-base-uncased_nodate} pre-trained language model, which has been trained on 110 million parameters and works well with English texts. Writing embeddings were primarily generated in sentence chunks. For posts that were too long to feed into the transformer model (BERT has a maximum input sentence length of 512 tokens, including the [CLS] and [SEP] tokens), we concatenated all user posts together in chronological order and broke the resulting text into chunks of length \( n \), where \( n = 512 - 2 = 510 \). BERT produced embeddings with dimensions of 768.
 
 \subsubsection{Feature Engineering}
 
-Initially, we considered that the 768 dimensions of the sentence embeddings might be too large. Therefore, we standardized the features and conducted principal component analysis (PCA) for dimensionality reduction. The dimensions were reduced from 768 to 50. In the model training phase, we trained the machine learning models on both high-dimensional embeddings as well as embedding data obtained after dimensionality reduction.
+Initially, we considered that the 768 dimensions of the sentence embeddings might be too large. Therefore, we standardized the features and conducted principal component analysis (PCA) for dimensionality reduction\cite{fodor_survey_2002}. The dimensions were reduced from 768 to 50. In the model training phase, we trained the machine learning models on both high-dimensional embeddings as well as embedding data obtained after dimensionality reduction.
 
 \subsubsection{Modeling}
 
-Since deep learning models require substantial amounts of data, we decided to use simpler machine learning models. We selected 5 models: Random Forest, Extra Trees, XGBoost, Ridge Regression, and Support Vector Machines (SVM). The models were trained using the generated embeddings.
+Given the substantial data requirements of deep learning models, we opted to use simpler machine learning models for our analysis. We selected five models: Random Forest, Extra Trees, XGBoost, Ridge Regression, and Support Vector Machines (SVM). These models were trained using the generated embeddings.
 
 \begin{table}[h]
 \centering
@@ -288,10 +286,6 @@ To evaluate the performance of the models, the eRisk team provided several evalu
 \end{itemize}
 
 For a model baseline, we used results from the runs for the 2023 challenge, which involved the same task.
-
-\subsection{Task 3 Pipeline}
-
-This pipeline outlines our approach to predicting EDE-Q responses based on users' social media activity, detailing the steps from data collection to model evaluation.
 
 \begin{figure}[h]
 \centering
@@ -340,7 +334,7 @@ Despite these challenges, our team consistently ranked in the top 5 among five p
 
 In the future, our research will focus on exploring the potential of deep learning models for predicting the severity of eating disorder symptoms from social media content. Deep learning architectures, such as recurrent neural networks (RNNs), offer the ability to capture complex patterns in text data more effectively, which could lead to improved performance.
 
-Given that deep learning models often require large amounts of data, our next step will involve exploring data augmentation techniques. We plan to generate additional data using techniques such as Language Model Fine-Tuning (LMFT) or libraries like TextSynth, which can help increase the diversity and size of our dataset, thereby enhancing the robustness of our models.
+Given that deep learning models often require large amounts of data, our next step will involve exploring data augmentation techniques. We plan to generate additional data using techniques such as Language Model Fine-Tuning (LMFT) or services like TextSynth, which can help increase the diversity and size of our dataset, thereby enhancing the robustness of our models.
 
 Furthermore, to address the shortcomings in meeting the Eating Concern (ECS) and Weight Concern (WCS) subscales, we will incorporate semantic analysis techniques. By deepening our understanding of eating disorder sub-topics from textual data, we aim to refine our models and improve their ability to accurately assess the severity of specific symptoms. This approach will contribute to more comprehensive and precise predictions, ultimately enhancing the effectiveness of interventions and support systems for individuals with eating disorders.
 
@@ -352,7 +346,7 @@ Summary of the work and its contributions.
 
 Thank you to the DS@GT CLEF team for their support.
 
-\bibliography{main}
+\bibliography{DSGT-eRisk}
 
 % \appendix
 % \section{Online Resources}
